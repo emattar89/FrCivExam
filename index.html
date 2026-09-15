@@ -104,6 +104,23 @@ textarea{width:100%;min-height:150px;font:13px/1.4 ui-monospace,Menlo,monospace;
 .cadre p{font-size:13px;font-weight:700;color:var(--sceau);margin:0 0 8px}
 .cadre ul{margin:0;padding-left:18px}
 .cadre li{font-size:15px;line-height:1.5;margin-bottom:6px}
+.frise{position:relative;padding-left:28px;margin:0 0 6px}
+.frise::before{content:"";position:absolute;left:5px;top:10px;bottom:10px;width:2px;
+  background:var(--trait)}
+.ere{position:relative;font-size:12.5px;font-weight:700;color:var(--sceau);
+  text-transform:uppercase;letter-spacing:.06em;margin:30px 0 14px}
+.ere:first-child{margin-top:4px}
+.ere::before{content:"";position:absolute;left:-27px;top:1px;width:11px;height:11px;
+  background:var(--sceau);border-radius:2px;transform:rotate(45deg)}
+.evt{position:relative;margin:0 0 20px}
+.evt::before{content:"";position:absolute;left:-28px;top:5px;width:12px;height:12px;
+  border-radius:50%;background:var(--papier);border:2.5px solid var(--encre)}
+.evt .an{font-family:Georgia,serif;font-size:18px;line-height:1.2;margin:0;
+  font-variant-numeric:tabular-nums}
+.evt .ti{font-size:16px;font-weight:700;margin:3px 0 0;line-height:1.35}
+.evt .de{font-size:14.5px;color:var(--gris);line-height:1.55;margin:5px 0 0}
+.evt .pastille{margin-top:8px;display:inline-block}
+.rotation{font-size:13px;color:var(--gris);line-height:1.5;margin:2px 0 22px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -127,6 +144,8 @@ const stock = {
   ecrire(o){ try{ localStorage.setItem(CLE, JSON.stringify(o)); }catch(e){ memoire = o; } }
 };
 let etat = Object.assign({vus:{}, arevoir:{}, lus:{}, importe:null}, stock.lire());
+if (!etat.tours){ etat.tours = {};
+  Object.keys(etat.vus).forEach(i => etat.tours[i] = 1); }
 const sauver = () => stock.ecrire(etat);
 
 const $ = id => document.getElementById(id);
@@ -152,15 +171,117 @@ function chrome(sous, compteur){
 function bouton(t, cls, fn){ const b = document.createElement("button");
   b.className = cls; b.textContent = t; b.onclick = fn; return b; }
 
+/* ---------------------------------------------------------- frise des dates */
+/* Dates rédigées à partir du cours et des réponses de la liste officielle.
+   c = numéro du chapitre du cours où la date est traitée. */
+const CHRONO = [
+{ere:"Ancien Régime et Révolution", entrees:[
+  {an:"XVIIe siècle", ti:"Louis XIV, le Roi-Soleil", c:4,
+   de:"Versailles est son château. Les rois de France étaient sacrés à Reims."},
+  {an:"14 juillet 1789", ti:"Prise de la Bastille", c:4,
+   de:"Début de la Révolution. La fête nationale commémore cette journée et la Fête de la Fédération du 14 juillet 1790."},
+  {an:"26 août 1789", ti:"Déclaration des droits de l'homme et du citoyen", c:3,
+   de:"Son article 16 consacre la séparation des pouvoirs. Elle appartient au bloc de constitutionnalité."},
+  {an:"1792", ti:"Ire République et La Marseillaise", c:4,
+   de:"Rouget de Lisle compose La Marseillaise à Strasbourg la même année."},
+  {an:"1793", ti:"Louis XVI est guillotiné", c:4,
+   de:"Roi en 1789, il est le dernier roi de France jugé et exécuté."},
+  {an:"1794, puis 1802", ti:"Première abolition de l'esclavage, puis rétablissement", c:4,
+   de:"L'abolition de 1794 est annulée en 1802 : il faudra attendre 1848."},
+  {an:"1804", ti:"Napoléon Ier empereur — le Code civil", c:4,
+   de:"Adopté en 1804, le Code civil organise encore aujourd'hui le droit privé français."}]},
+{ere:"Le siècle des républicains", entrees:[
+  {an:"1848", ti:"Abolition définitive de l'esclavage", c:4,
+   de:"Portée par Victor Schoelcher. Nantes avait été le principal port négrier français au XVIIIe siècle."},
+  {an:"1881 et 1882", ti:"Les lois Jules Ferry sur l'école", c:4,
+   de:"L'école devient gratuite en 1881, puis obligatoire et laïque en 1882."},
+  {an:"1889", ti:"La tour Eiffel", c:4,
+   de:"Construite pour l'Exposition universelle de Paris."},
+  {an:"1901", ti:"Liberté d'association", c:1,
+   de:"Chacun peut créer une association ou y adhérer librement, sans autorisation préalable."},
+  {an:"9 décembre 1905", ti:"Séparation des Églises et de l'État", c:1,
+   de:"La République garantit le libre exercice des cultes et ne reconnaît, ne salarie ni ne subventionne aucun culte. Elle peut entretenir les édifices antérieurs à 1905 dont elle est propriétaire."}]},
+{ere:"Les deux guerres mondiales", entrees:[
+  {an:"1914-1918", ti:"Première Guerre mondiale", c:4,
+   de:"Armistice du 11 novembre 1918, commémoré chaque année par un jour férié."},
+  {an:"1939-1945", ti:"Seconde Guerre mondiale", c:4,
+   de:"Résistance — Jean Moulin, Lucie Aubrac —, Shoah, puis Libération."},
+  {an:"18 juin 1940", ti:"L'appel du général de Gaulle", c:4,
+   de:"Lancé depuis Londres, à la radio."},
+  {an:"6 juin 1944", ti:"Débarquement en Normandie", c:4,
+   de:"Paris est libéré en août 1944."},
+  {an:"1944", ti:"Droit de vote des femmes", c:4,
+   de:"Elles obtiennent le droit de vote et celui d'être élues."},
+  {an:"8 mai 1945", ti:"Capitulation de l'Allemagne", c:4,
+   de:"Jour férié qui commémore la victoire de 1945."},
+  {an:"1945", ti:"Sécurité sociale et ONU", c:1,
+   de:"La Sécurité sociale, créée au lendemain de la guerre, est l'instrument principal de la solidarité nationale. L'ONU est créée la même année."}]},
+{ere:"La Ve République", entrees:[
+  {an:"9 mai 1950", ti:"Déclaration Schuman", c:2,
+   de:"À l'origine de la construction européenne. La journée de l'Europe est célébrée le 9 mai."},
+  {an:"1951 et 1957", ti:"Traité de Paris, traités de Rome", c:2,
+   de:"Les deux étapes qui précèdent l'Union européenne."},
+  {an:"1950-1962", ti:"La décolonisation", c:4,
+   de:"En Asie, puis en Afrique."},
+  {an:"4 octobre 1958", ti:"Naissance de la Ve République", c:2,
+   de:"La Constitution du 4 octobre 1958 est toujours en vigueur. Charles de Gaulle en est le premier président."},
+  {an:"1962", ti:"Le président élu au suffrage universel direct", c:2,
+   de:"Réforme de 1962, appliquée pour la première fois en 1965."},
+  {an:"1975", ti:"Loi Veil : l'IVG légalisée", c:5,
+   de:"Portée par Simone Veil, rescapée de la Shoah, future présidente du Parlement européen, entrée au Panthéon en 2018."},
+  {an:"1980", ti:"Marguerite Yourcenar à l'Académie française", c:4,
+   de:"Première femme élue à l'Académie française."},
+  {an:"1981", ti:"Abolition de la peine de mort", c:3,
+   de:"Sous la présidence de François Mitterrand ; la loi est portée par Robert Badinter."}]},
+{ere:"L'Europe et aujourd'hui", entrees:[
+  {an:"1992", ti:"Traité de Maastricht", c:2,
+   de:"Fonde l'Union européenne et crée la citoyenneté européenne."},
+  {an:"1999, puis 2002", ti:"L'euro", c:2,
+   de:"La monnaie existe depuis 1999 ; les pièces et les billets circulent depuis 2002."},
+  {an:"15 mars 2004", ti:"Signes religieux à l'école", c:1,
+   de:"La loi interdit aux élèves des écoles, collèges et lycées publics les signes religieux ostensibles. Un signe discret reste permis."},
+  {an:"2007", ti:"Traité de Lisbonne", c:2,
+   de:"Réforme le fonctionnement de l'Union européenne."},
+  {an:"2011", ti:"Mayotte, 101e département", c:4,
+   de:"Cinquième département et région d'outre-mer, avec la Guadeloupe, la Martinique, la Guyane et La Réunion."},
+  {an:"2013", ti:"Charte de la laïcité à l'École", c:1,
+   de:"Quinze articles qui rappellent les règles à toute la communauté scolaire. La Croatie entre la même année dans l'Union européenne."},
+  {an:"10 juillet 2019", ti:"L'éducation sans violence", c:5,
+   de:"L'autorité parentale s'exerce sans violence physique ni psychologique."},
+  {an:"31 janvier 2020", ti:"Le Royaume-Uni quitte l'Union européenne", c:2,
+   de:"L'Union compte 27 États membres au 1er janvier 2025."},
+  {an:"1er juillet 2021", ti:"Congé paternité de 25 jours", c:5,
+   de:"32 jours en cas de naissances multiples, auxquels s'ajoutent 3 jours de congé de naissance."},
+  {an:"2024", ti:"L'IVG garantie par la Constitution", c:5,
+   de:"La liberté d'y recourir y est inscrite depuis 2024."},
+  {an:"2025", ti:"La France aujourd'hui", c:4,
+   de:"Environ 68 millions d'habitants ; 27 États dans l'Union européenne au 1er janvier."}]}];
+const nbDates = () => CHRONO.reduce((n, e) => n + e.entrees.length, 0);
+
+/* ------------------------------------------------------------- rotation */
+/* On sert d'abord les questions les moins souvent posées : toute la liste est
+   ainsi parcourue avant qu'une question ne revienne une deuxième fois. */
+const tours = q => etat.tours[q.i] || 0;
+function ordonner(liste){ return melanger(liste).sort((a, b) => tours(a) - tours(b)); }
+
 /* ---------------------------------------------------------------- accueil */
 function accueil(){
   s = null; chrome("naturalisation");
   const dispo = mentions();
   if (!etat.filtreM || !dispo.includes(etat.filtreM)) etat.filtreM = "NAT";
   if (!etat.filtreT) etat.filtreT = "toutes";
-  const tot = banque().filter(q => q.m === etat.filtreM).length;
-  const vus = Object.keys(etat.vus).length, revoir = Object.keys(etat.arevoir).length;
+  const liste = banque().filter(q => q.m === etat.filtreM);
+  const tot = liste.length;
+  const vus = liste.filter(q => tours(q)).length, revoir = Object.keys(etat.arevoir).length;
   const lus = DONNEES.cours.filter(c => etat.lus[c.num]).length;
+  const sel = selection(), neufs = sel.filter(q => !tours(q)).length;
+  const tour = sel.length ? Math.min(...sel.map(tours)) + 1 : 1;
+  const motRotation = !sel.length ? "" : neufs
+    ? `${neufs} question${neufs > 1 ? "s" : ""} sur ${sel.length} ne vous ${
+        neufs > 1 ? "ont" : "a"} jamais été posée${neufs > 1 ? "s" : ""} :
+       elles passent en premier, avant toute répétition.`
+    : `Vous avez parcouru les ${sel.length} questions de cette sélection.
+       Tour ${tour} : les moins vues repassent d'abord.`;
 
   main.innerHTML = `
   <div class="ecran">
@@ -169,17 +290,20 @@ function accueil(){
        une question à la fois, vous répondez de tête, ce que vous ratez revient.</p>
     <div class="stat">
       <div><b>${lus}<span style="font-size:15px;color:var(--gris)">/5</span></b><span>chapitres lus</span></div>
-      <div><b>${vus}</b><span>questions vues</span></div>
+      <div><b>${vus}<span style="font-size:15px;color:var(--gris)">/${tot}</span></b><span>questions vues</span></div>
       <div><b>${revoir}</b><span>à revoir</span></div>
     </div>
     <div class="rangee" style="margin-bottom:10px">
       <button class="btn" id="goCours">Ouvrir le cours</button></div>
+    <div class="rangee" style="margin-bottom:10px">
+      <button class="btn creux" id="goDates">Les ${nbDates()} dates à retenir</button></div>
     <div class="rangee" style="margin-bottom:26px">
       <button class="btn creux" id="goExam">Session chronométrée · 28 questions</button></div>
     <fieldset><legend>Liste</legend><div class="choix" id="chxM"></div></fieldset>
     <fieldset><legend>S'entraîner sur</legend><div class="choix" id="chxT"></div></fieldset>
-    <div class="rangee" style="margin-bottom:10px">
-      <button class="btn creux" id="go">Réviser ces ${selection().length} questions</button></div>
+    <div class="rangee" style="margin-bottom:8px">
+      <button class="btn creux" id="go">Réviser ces ${sel.length} questions</button></div>
+    ${motRotation ? `<p class="rotation">${motRotation}</p>` : ""}
     <div class="rangee">
       <button class="btn creux" id="goRevoir" ${revoir?"":"disabled style=opacity:.4"}>
         Reprendre les ${revoir} à revoir</button></div>
@@ -207,21 +331,23 @@ function accueil(){
     chxT.appendChild(b);
   });
   $("goCours").onclick = sommaire;
+  $("goDates").onclick = chronologie;
   $("go").onclick = () => lancer(selection(), false);
-  $("goRevoir").onclick = () => lancer(melanger(banque().filter(q => etat.arevoir[q.i])), false);
+  $("goRevoir").onclick = () => lancer(ordonner(banque().filter(q => etat.arevoir[q.i])), false);
   $("goExam").onclick = () => lancer(tirageExamen(), true);
   $("goImport").onclick = ecranImport;
   $("goReset").onclick = () => { if (confirm("Effacer votre progression ?")){
-      etat.vus = {}; etat.arevoir = {}; etat.lus = {}; sauver(); accueil(); } };
+      etat.vus = {}; etat.arevoir = {}; etat.lus = {}; etat.tours = {};
+      sauver(); accueil(); } };
 }
 function selection(){
-  return melanger(banque().filter(q => q.m === etat.filtreM &&
+  return ordonner(banque().filter(q => q.m === etat.filtreM &&
     (etat.filtreT === "toutes" || q.t === etat.filtreT)));
 }
 function tirageExamen(){
   const t = [];
   DONNEES.themes.forEach(th => {
-    const pool = melanger(banque().filter(q => q.m === etat.filtreM && q.t === th));
+    const pool = ordonner(banque().filter(q => q.m === etat.filtreM && q.t === th));
     t.push(...pool.slice(0, DONNEES.quotas[th]));
   });
   return melanger(t);
@@ -251,7 +377,8 @@ function sommaire(){
     l.appendChild(b);
   });
   commandes.hidden = false; rangee.innerHTML = "";
-  rangee.appendChild(bouton("Revenir au menu", "btn creux", accueil));
+  rangee.appendChild(bouton("Les dates à retenir", "btn creux", chronologie));
+  rangee.appendChild(bouton("Menu", "btn creux mini", accueil));
 }
 
 function lireChapitre(num){
@@ -286,10 +413,38 @@ function lireChapitre(num){
   commandes.hidden = false; rangee.innerHTML = "";
   rangee.appendChild(bouton("S'entraîner sur ce thème", "btn", () => {
     etat.filtreT = c.theme; etat.filtreM = "NAT"; sauver();
-    lancer(melanger(banque().filter(q => q.m === "NAT" && q.t === c.theme)), false);
+    lancer(ordonner(banque().filter(q => q.m === "NAT" && q.t === c.theme)), false);
   }));
   rangee.appendChild(bouton(num < 5 ? "Chapitre suivant" : "Sommaire", "btn creux mini",
     () => num < 5 ? lireChapitre(num + 1) : sommaire()));
+}
+
+function chronologie(){
+  chrome("les dates");
+  let html = `<div class="cours"><p class="meta">Repères</p>
+    <h2>Les dates à retenir</h2>
+    <p class="intro">${nbDates()} dates, dans l'ordre, tirées du cours et des réponses de la
+      liste officielle. Les dates pèsent lourd au thème 4, mais la laïcité, les droits et
+      l'Europe en apportent aussi : chaque repère indique le chapitre où il est traité.</p>
+    <div class="frise">`;
+  CHRONO.forEach(bloc => {
+    html += `<h3 class="ere">${echap(bloc.ere)}</h3>`;
+    bloc.entrees.forEach(e => {
+      html += `<div class="evt"><p class="an">${echap(e.an)}</p>
+        <p class="ti">${echap(e.ti)}</p><p class="de">${echap(e.de)}</p>
+        <span class="pastille">Thème ${e.c}</span></div>`;
+    });
+  });
+  main.innerHTML = html + `</div>
+    <p class="note">Une date retenue seule s'oublie : relisez le chapitre indiqué, puis
+      entraînez-vous dessus.</p></div>`;
+  commandes.hidden = false; rangee.innerHTML = "";
+  rangee.appendChild(bouton("S'entraîner sur l'histoire", "btn", () => {
+    const c = DONNEES.cours.find(x => x.num === 4);
+    etat.filtreT = c.theme; etat.filtreM = "NAT"; sauver();
+    lancer(ordonner(banque().filter(q => q.m === "NAT" && q.t === c.theme)), false);
+  }));
+  rangee.appendChild(bouton("Menu", "btn creux mini", accueil));
 }
 
 /* ----------------------------------------------------------- entraînement */
@@ -334,7 +489,7 @@ function reveler(q){
   rangee.appendChild(bouton("À revoir", "btn revoir", () => noter(q, false)));
 }
 function noter(q, su){
-  etat.vus[q.i] = 1;
+  etat.vus[q.i] = 1; etat.tours[q.i] = tours(q) + 1;
   if (su){ s.su++; delete etat.arevoir[q.i]; } else { s.rate++; etat.arevoir[q.i] = 1; }
   sauver(); s.n++; poser();
 }
